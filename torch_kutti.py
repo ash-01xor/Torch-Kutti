@@ -17,6 +17,23 @@ class Tensor:
         result._ctx = Function(Mul, self, other)
         return result
     
+    def backward(self, grad=None):
+        if grad is None:
+            grad = Tensor([1])
+        
+        if self._grad is None:
+            self._grad = grad
+        else:
+            self._grad.data += grad.data
+
+        if self._ctx is not None:
+            op = self._ctx.op
+            child_nodes = self._ctx.args
+
+            grads = op.backward(self._ctx, grad)
+            for tensor, grad in zip(child_nodes, grads):
+                tensor.backward(grad)
+    
     def __repr__(self) -> str:
         return f"tensor({self.data})"
     
@@ -26,9 +43,8 @@ class Function:
         self.op = op
         self.args = args
 
-    def backward(self,grad):
-        return self.op.backward(self.args,grad)
-
+    def backward(self,ctx,grad):
+        return self.op.backward(ctx,grad)
 
 class Add:
     @staticmethod
@@ -36,7 +52,7 @@ class Add:
         return Tensor(x.data+y.data)
     
     @staticmethod
-    def backward(args,grad):
+    def backward(ctx,grad):
         return grad, grad
     
 class Mul:
@@ -45,6 +61,6 @@ class Mul:
         return Tensor(x.data * y.data)
     
     @staticmethod
-    def backward(args,grad):
-        x,y = args
+    def backward(ctx,grad):
+        x,y = ctx.args
         return Tensor(y.data * grad.data), Tensor(x.data * grad.data)
