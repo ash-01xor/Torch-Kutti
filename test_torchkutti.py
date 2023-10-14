@@ -2,7 +2,7 @@ import numpy as np
 from torch_kutti import Tensor
 
 def f(x):
-    return x * x * x +  x
+    return x * x +  x
 
 x = Tensor([6])
 y = Tensor([9])    
@@ -23,7 +23,7 @@ print(f"y:{y1} grad:{y1.grad}")
 
 print("--"*25)
 
-x2 = Tensor([3.9])
+x2 = Tensor([3.2])
 z2 = f(x2)
 z2.backward()
 print(f"X:{x2} grad:{x2.grad}")
