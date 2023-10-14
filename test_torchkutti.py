@@ -13,8 +13,8 @@ print(f"x:{x},grad:{x.grad}")
 print(f"y:{y} grad:{y.grad}")
 print("--"*25)
 
-x1 = Tensor([8.2])
-y1 = Tensor([1.9]) 
+x1 = Tensor([2])
+y1 = Tensor([3]) 
 z1 = x1*y1
 print(z1)
 z1.backward()

@@ -7,33 +7,42 @@ class Tensor:
         self._ctx = None
 
     def __add__(self, other):
+        """
+        Used for addition operation
+        Sets the context needed for gradient calculation during backprop 
+        """
         result = Tensor(self.data + other.data)
         result._ctx = Function(Add, self, other)
         return result
 
     def __mul__(self, other):
+        """
+        Used for multiplication operation
+        """
         result = Tensor(self.data * other.data)
         result._ctx = Function(Mul, self, other)
         return result
     
     def backward(self, grad=None):
-
-        if self._ctx is None:
+        """
+        Computes the gradients using backprop
+        """
+        if self._ctx is None: #checks for context
             return 
         
         if grad is None:
-            grad = Tensor([1.])
-            self.grad = grad
+            grad = Tensor(np.ones_like(self.data))
         
-        op = self._ctx.op
-        child_nodes = self._ctx.args
+        op = self._ctx.op #retrives the operation performed
+        child_nodes = self._ctx.args # used to find the input nodes
         
-        grads = op.backward(self._ctx,grad)
+        grads = op.backward(self._ctx,grad) #computes the gradients
         
         for tensor,grad in zip(child_nodes,grads):
             if tensor.grad is None:
-                tensor.grad = Tensor(np.zeros_like(self.data))
-            tensor.grad += grad
+                tensor.grad = grad
+            else:
+                tensor.grad += grad
             tensor.backward(grad)
 
     def __repr__(self):
