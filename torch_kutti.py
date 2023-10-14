@@ -3,7 +3,7 @@ import numpy as np
 class Tensor:
     def __init__(self, data):
         self.data = data if isinstance(data, np.ndarray) else np.array(data)
-        self._grad = None
+        self.grad = None
         self._ctx = None
 
     def __add__(self, other):
@@ -17,6 +17,10 @@ class Tensor:
         return result
     
     def backward(self, grad=None):
+
+        if self._ctx is None:
+            return 
+        
         if grad is None:
             grad = Tensor([1.])
             self.grad = grad
@@ -27,8 +31,11 @@ class Tensor:
         grads = op.backward(self._ctx,grad)
         
         for tensor,grad in zip(child_nodes,grads):
-            tensor.grad = grad
-    
+            if tensor.grad is None:
+                tensor.grad = Tensor(np.zeros_like(self.data))
+            tensor.grad += grad
+            tensor.backward(grad)
+
     def __repr__(self):
         return f"tensor({self.data})"
 
@@ -48,7 +55,7 @@ class Add:
     @staticmethod
     def backward(ctx, grad):
         x,y = ctx.args
-        return Tensor([1]),Tensor([1])
+        return Tensor([1])*grad,Tensor([1])*grad
 
 class Mul:
     @staticmethod
@@ -58,5 +65,4 @@ class Mul:
     @staticmethod
     def backward(ctx, grad):
         x, y = ctx.args
-        return Tensor(y.data), Tensor(x.data)
-
+        return Tensor(y.data)*grad, Tensor(x.data)*grad
