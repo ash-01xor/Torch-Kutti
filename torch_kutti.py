@@ -44,9 +44,6 @@ class Function:
         self.op = op
         self.args = args
 
-    def backward(self, ctx, grad):
-        return self.op.backward(ctx, grad)
-
 class Add:
     @staticmethod
     def forward(x, y):
