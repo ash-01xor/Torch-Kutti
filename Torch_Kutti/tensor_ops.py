@@ -25,6 +25,13 @@ class Tensor:
     def zero_grad(self):
         self.grad = np.zeros_like(self._data)
 
+    def zero_grad_tree(self):
+        self.zero_grad()
+        if self.operation:
+            for parent in self.operation.parents:
+                parent.zero_grad_tree()
+            self.operation = None
+
     
     def backward(self, grad=None, z=None):
         
@@ -47,6 +54,17 @@ class Tensor:
         op = Add()
         return op.forward(self, tensor(other))
     
+    def __radd__(self,other):
+        op = Add()
+        return op.forward(self,tensor(other))
+    
+    def __iadd__(self,other):
+        op = Add()
+        return op.forward(self,tensor(other))
+    
+    def __mul__(self,other):
+        op = Mul()
+        return op.forward(self,tensor(other))
 
     def sum(self, dim=-1, keepdims=False):
         op = Sum()
@@ -95,6 +113,51 @@ class Add:
                 db = db.sum(axis=n, keepdims=True)
         b.backward(db, z)
             
+class Mul:
+
+    def forward(self,a,b):
+        requires_grad = a.requires_grad or b.requires_grad
+        
+        data = a._data * b._data
+
+        z = Tensor(data,requires_grad=requires_grad,operation=self)
+
+        self.parents = (a,b)
+        a.child.append(z)
+        b.child.append(z)
+        self.cache = (a,b)
+
+        return z
+
+    def backward(self,dz,z):
+        
+        a,b = self.cache
+
+        if a.requires_grad:
+            da = dz * b._data
+            grad_dim = len(dz.shape)
+            in_dim = len(a.shape)
+            for _ in range(grad_dim - in_dim):
+                da = da.sum(axis=0)
+            
+            for n, dim in enumerate(a.shape):
+                if dim == 1:
+                    da = da.sum(axis=n, keepdims=True)
+            a.backward(da, z)
+
+        if b.requires_grad:
+            db = dz * a._data
+            grad_dim = len(dz.shape)
+            in_dim = len(a.shape)
+            for _ in range(grad_dim - in_dim):
+                db = db.sum(axis=0)
+            
+            for n, dim in enumerate(b.shape):
+                if dim == 1:
+                    db = db.sum(axis=n, keepdims=True)
+            b.backward(db, z)
+        
+
 
 class Sum:
     def forward(self, a, dim, keepdims):
