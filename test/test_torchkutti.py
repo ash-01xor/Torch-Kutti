@@ -1,30 +1,27 @@
+import unittest
+import sys
+sys.path.append(".")
+
 import numpy as np
-from torch_kutti import Tensor
+from Torch_Kutti.tensor_ops import Tensor
 
-def f(x):
-    return x * x +  x
+class TestTensorOperations(unittest.TestCase):
+    def setUp(self):
+        self.tensor_a = Tensor([1, 2, 3], requires_grad=True)
+        self.tensor_b = Tensor([4, 5, 6], requires_grad=True)
 
-x = Tensor([6])
-y = Tensor([9])    
-z = x+y
-print(z)
-z.backward()
-print(f"x:{x},grad:{x.grad}")
-print(f"y:{y} grad:{y.grad}")
-print("--"*25)
+    def test_addition(self):
+        result = self.tensor_a + self.tensor_b
 
-x1 = Tensor([2])
-y1 = Tensor([3]) 
-z1 = x1*y1
-print(z1)
-z1.backward()
-print(f"x:{x1},grad:{x1.grad}")
-print(f"y:{y1} grad:{y1.grad}")
+        
+        self.assertIsInstance(result, Tensor)
+        self.assertTrue(np.array_equal(result.data(), np.array([5, 7, 9])))
 
-print("--"*25)
+        
+        result.backward()
+        self.assertTrue(np.array_equal(self.tensor_a.grad, np.array([1, 1, 1])))
+        self.assertTrue(np.array_equal(self.tensor_b.grad, np.array([1, 1, 1])))
 
-x2 = Tensor([3.2])
-z2 = f(x2)
-z2.backward()
-print(f"X:{x2} grad:{x2.grad}")
-
+    
+if __name__ == '__main__':
+    unittest.main()
