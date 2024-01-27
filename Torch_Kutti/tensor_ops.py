@@ -62,6 +62,19 @@ class Tensor:
         op = Add()
         return op.forward(self,tensor(other))
     
+    def __neg__(self):
+        op = Neg()
+        return op.forward(self)
+    
+    def __sub__(self,other):
+        return self + -other
+    
+    def __rsub__(self,other):
+        return other + -self
+    
+    def __isub__(self,other):
+        return self + -other
+    
     def __mul__(self,other):
         op = Mul()
         return op.forward(self,tensor(other))
@@ -112,6 +125,25 @@ class Add:
             if dim == 1:
                 db = db.sum(axis=n, keepdims=True)
         b.backward(db, z)
+
+class Neg:
+
+    def forward(self,a):
+        requires_grad = a.requires_grad
+        data = - a._data
+        z  = Tensor(data,requires_grad=requires_grad,operation=self)
+        self.parents = (a,)
+        a.child.append(z)
+        self.cache = a
+        return z
+        
+
+    def backward(self,dz,z):
+        a = self.cache
+
+        if a.requires_grad:
+            da = -dz
+            a.backward(da,z)
             
 class Mul:
 
