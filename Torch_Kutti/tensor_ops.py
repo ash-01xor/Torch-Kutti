@@ -75,7 +75,19 @@ class Tensor:
     def __isub__(self,other):
         return self + -other
     
+    def __matmul__(self,other):
+        op = MatMul()
+        return op.forward(self,tensor(other))
+    
     def __mul__(self,other):
+        op = Mul()
+        return op.forward(self,tensor(other))
+    
+    def __imul__(self,other):
+        op = Mul()
+        return op.forward(self,tensor(other))
+
+    def __rmul__(self,other):
         op = Mul()
         return op.forward(self,tensor(other))
 
@@ -144,6 +156,49 @@ class Neg:
         if a.requires_grad:
             da = -dz
             a.backward(da,z)
+
+class MatMul:
+    def forward(self,a,b):
+
+        requires_grad = a.requires_grad or b.requires_grad
+        data = a._data @ b._data
+        
+        z = Tensor(data,requires_grad=requires_grad,operation=self)
+        
+        self.parents = (a,b)
+        a.child.append(z)
+        b.child.append(z)
+        self.cache = (a,b)
+
+        return z
+    
+    def backward(self,dz,z):
+
+        a,b = self.cache
+
+        if a.requires_grad:
+
+            da = dz @ b._data.swapaxes(-1,-2)
+
+            in_dim = len(a.shape)
+            grad_dim = len(da.shape)
+
+            for _ in range(grad_dim-in_dim):
+                da = da.sum(axis=0)
+
+            a.backward(da,z)
+
+        if b.requires_grad:
+
+            db = a._data.swapaxes(-1,-2) @ dz
+
+            in_dim = len(b.shape)
+            grad_dim = len(db.shape)
+
+            for _ in range(grad_dim-in_dim):
+                db = db.sum(axis=0)
+
+            b.backward(db,z)
             
 class Mul:
 
