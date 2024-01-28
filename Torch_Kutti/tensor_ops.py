@@ -90,6 +90,10 @@ class Tensor:
     def __rmul__(self,other):
         op = Mul()
         return op.forward(self,tensor(other))
+    
+    def __truediv__(self,other):
+        op = Div()
+        return op.forward(self,tensor(other))
 
     def sum(self, dim=-1, keepdims=False):
         op = Sum()
@@ -244,7 +248,50 @@ class Mul:
                     db = db.sum(axis=n, keepdims=True)
             b.backward(db, z)
         
+class Div:
 
+    def forward(self,a,b):
+        requires_grad = a.requires_grad or b.requires_grad
+        data = a._data / b._data
+        z = Tensor(data,requires_grad=requires_grad,operation=self)
+        self.parents = (a,b)
+        a.child.append(z)
+        b.child.append(z)
+
+        self.cache = (a,b)
+        return z
+
+
+    def backward(self,dz,z):
+        a, b = self.cache
+
+        if a.requires_grad:
+            da = dz * (1/b._data)
+
+            grad_dim = len(dz.shape)
+            in_dim = len(a.shape)
+
+            for _ in range(grad_dim - in_dim):
+                da = da.sum(axis=0)
+            for n , dim in enumerate(a.shape):
+                if dim==1:
+                    da = da.sum(axis=n,keepdims=True)
+
+            a.backward(da,z)
+
+        if b.requires_grad:
+            db = dz * (1/a._data)
+
+            grad_dim = len(dz.shape)
+            in_dim = len(b.shape)
+
+            for _ in range(grad_dim - in_dim):
+                db = db.sum(axis=0)
+            for n , dim in enumerate(b.shape):
+                if dim==1:
+                    da = db.sum(axis=n,keepdims=True)
+
+            b.backward(db,z)
 
 class Sum:
     def forward(self, a, dim, keepdims):
